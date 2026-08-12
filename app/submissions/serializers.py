@@ -60,6 +60,7 @@ def submission_to_dict(s, summary: bool = False) -> dict:
         "hasException": s.has_exception,
         "attachmentCount": len([a for a in s.attachments if not a.IsDeleted]),
         "legacyXmlFileName": s.LegacyXmlFileName,
+        "lastSavedUtc": (s.ModifiedUtc or s.CreatedUtc).isoformat() if (s.ModifiedUtc or s.CreatedUtc) else None,
     }
     if summary:
         return data

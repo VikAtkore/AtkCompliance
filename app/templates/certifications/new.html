@@ -58,6 +58,7 @@
             <button type="button" id="next-btn" class="btn btn-primary">Next</button>
           </div>
           <div>
+            <span id="submission-info" class="me-2"></span>
             <button type="button" id="save-draft" class="btn btn-outline-primary">Save Draft</button>
             <button type="submit" id="submit-btn" class="btn btn-success d-none">Submit</button>
           </div>
@@ -92,6 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
   nextBtn.addEventListener('click', () => { if (current < steps.length-1) { current++; showStep(current); } });
   prevBtn.addEventListener('click', () => { if (current > 0) { current--; showStep(current); } });
 
+  let currentSubmissionId = null;
+  let mySubmissions = [];
+
+  // Load existing user submissions so we can find drafts
+  fetch('/api/submissions').then(r=>r.json()).then(j=>{ mySubmissions = j.items || []; }).catch(()=>{ mySubmissions = []; });
+
   // Load entities and periods
   fetch('/api/lookup/entities').then(r=>r.json()).then(j=>{
     const sel = document.getElementById('entity-select');
@@ -103,14 +110,54 @@ document.addEventListener('DOMContentLoaded', () => {
     sel.innerHTML = j.items.map(p=>`<option value="${p.periodId}">${p.quarterLabel}</option>`).join('');
   }).catch(()=>{document.getElementById('period-select').innerHTML='<option>Unable to load</option>'});
 
+  // When entity or period changes, attempt to find an existing draft and load it
+  function tryLoadExistingDraft() {
+    const entityId = Number(document.getElementById('entity-select').value);
+    const periodId = Number(document.getElementById('period-select').value);
+    const found = mySubmissions.find(s => s.status === 'Draft' && s.entityId === entityId && s.periodId === periodId);
+    if (found) {
+      // load full submission
+      fetch(`/api/submissions/${found.submissionId}`).then(r=>r.json()).then(j=>{
+        currentSubmissionId = j.submissionId;
+        document.getElementById('employee-name').value = j.employeeName || '';
+        document.getElementById('preparer-role').value = j.preparerRole || '';
+        document.getElementById('submission-info').textContent = `Submission: ${j.submissionId} • Last saved: ${j.lastSavedUtc || ''}`;
+      }).catch(()=>{});
+    } else {
+      currentSubmissionId = null;
+      document.getElementById('employee-name').value = '';
+      document.getElementById('preparer-role').value = '';
+      document.getElementById('submission-info').textContent = '';
+    }
+  }
+
+  document.getElementById('entity-select').addEventListener('change', tryLoadExistingDraft);
+  document.getElementById('period-select').addEventListener('change', tryLoadExistingDraft);
+
   saveBtn.addEventListener('click', async () => {
-    const entityId = document.getElementById('entity-select').value;
-    const periodId = document.getElementById('period-select').value;
-    const payload = { entityId: Number(entityId), periodId: Number(periodId) };
+    const entityId = Number(document.getElementById('entity-select').value);
+    const periodId = Number(document.getElementById('period-select').value);
+    const employeeName = document.getElementById('employee-name').value;
+    const preparerRole = document.getElementById('preparer-role').value;
+
     try {
-      const resp = await fetch('/api/submissions', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-      if (!resp.ok) throw new Error('save failed');
-      const data = await resp.json();
+      let data;
+      if (currentSubmissionId) {
+        // update header (server expects property names matching model)
+        const patch = { EmployeeName: employeeName, PreparerRole: preparerRole };
+        const resp = await fetch(`/api/submissions/${currentSubmissionId}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(patch) });
+        if (!resp.ok) throw new Error('update failed');
+        data = await resp.json();
+      } else {
+        const payload = { entityId: entityId, periodId: periodId, employeeName: employeeName, preparerRole: preparerRole };
+        const resp = await fetch('/api/submissions', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        if (!resp.ok) throw new Error('create failed');
+        data = await resp.json();
+        currentSubmissionId = data.submissionId;
+        // add to mySubmissions so future loads detect it
+        mySubmissions.push({ submissionId: data.submissionId, entityId: data.entityId, periodId: data.periodId, status: data.status });
+      }
+      document.getElementById('submission-info').textContent = `Submission: ${data.submissionId} • Last saved: ${data.lastSavedUtc || ''}`;
       alert('Draft saved (submission id: ' + data.submissionId + ')');
     } catch (e) {
       alert('Save draft failed');
