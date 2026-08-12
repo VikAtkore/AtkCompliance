@@ -1,0 +1,9 @@
+Flask-Migrate (Alembic) migration environment.
+
+  flask db upgrade                 # apply all pending migrations
+  flask db revision -m "message"   # hand-written revision
+  flask db migrate  -m "message"   # autogenerate from model changes (review before applying)
+
+Revision 0001 creates the full baseline schema. Revision 0002 seeds the four
+fixed roles and the 302 question catalogue. Both are idempotent on a clean
+database; never edit an applied revision -- add a new one.
