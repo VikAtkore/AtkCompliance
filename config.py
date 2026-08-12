@@ -104,10 +104,20 @@ class BaseConfig:
 
 
 class DevelopmentConfig(BaseConfig):
+    """Local development on a laptop: SQLite file, stub auth, no Graph calls."""
     DEBUG = True
     SESSION_COOKIE_SECURE = False
     AUTH_PROVIDER = os.environ.get("ACC_AUTH_PROVIDER", "dev")
     REMINDER_DRY_RUN = True
+    ENABLE_SCHEDULER = _bool("ACC_ENABLE_SCHEDULER", False)
+    # SQLite by default so no database server is needed to run the app locally.
+    # Point ACC_DATABASE_URI at SQL Server LocalDB to test the production driver.
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        "ACC_DATABASE_URI", "sqlite+pysqlite:///instance/atkore_compliance_dev.db")
+    SQLALCHEMY_ENGINE_OPTIONS = {}
+    # Signed-in identity used by the dev auth stub.
+    DEV_UPN = os.environ.get("ACC_DEV_UPN", "vpandey@atkore.com")
+    DEV_DISPLAY_NAME = os.environ.get("ACC_DEV_DISPLAY_NAME", "Vikash Pandey")
 
 
 class TestingConfig(BaseConfig):

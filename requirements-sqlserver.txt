@@ -1,0 +1,4 @@
+# SQL Server driver. Needed only when ACC_DATABASE_URI points at SQL Server.
+# Requires the Microsoft ODBC Driver 18 for SQL Server to be installed first.
+# Local development on SQLite does not need this file.
+pyodbc==5.1.0

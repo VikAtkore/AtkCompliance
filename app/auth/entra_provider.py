@@ -1,5 +1,6 @@
 """Microsoft Entra ID provider using MSAL confidential client flow."""
 import logging
+import os
 import msal
 from .provider import AuthProvider, AuthenticatedIdentity, AuthError
 
@@ -64,17 +65,26 @@ class EntraAuthProvider(AuthProvider):
 
 
 class DevAuthProvider(AuthProvider):
-    """Local/dev/test only. Never enabled when ACC_ENV=production."""
+    """Local/dev/test only. Never enabled when ACC_ENV=production.
+
+    Signs in as ACC_DEV_UPN with no password. Append ?upn=someone@atkore.com to
+    /auth/login to impersonate a different account while testing role scoping.
+    """
+
+    def __init__(self, upn: str = "dev.user@atkore.com",
+                 display_name: str = "Development User"):
+        self.upn = upn
+        self.display_name = display_name
 
     def build_login_url(self, state: str, redirect_uri: str) -> str:
-        return f"{redirect_uri}?state={state}&code=dev"
+        return f"{redirect_uri}?state={state}&code=dev&upn={self.upn}"
 
     def complete_login(self, request_args: dict, redirect_uri: str) -> AuthenticatedIdentity:
-        upn = request_args.get("upn", "dev.user@atkore.com").lower()
+        upn = (request_args.get("upn") or self.upn).lower()
         return AuthenticatedIdentity(
             object_id="00000000-0000-0000-0000-000000000000",
             user_principal_name=upn,
-            display_name="Development User",
+            display_name=self.display_name if upn == self.upn.lower() else upn,
             email=upn,
         )
 
@@ -85,9 +95,11 @@ class DevAuthProvider(AuthProvider):
 def build_provider(config) -> AuthProvider:
     kind = (config.get("AUTH_PROVIDER") or "entra").lower()
     if kind == "dev":
-        if config.get("ACC_ENV") == "production":
+        if os.environ.get("ACC_ENV", "").lower() == "production":
             raise RuntimeError("DevAuthProvider is not permitted in production.")
-        return DevAuthProvider()
+        return DevAuthProvider(
+            upn=config.get("DEV_UPN", "dev.user@atkore.com"),
+            display_name=config.get("DEV_DISPLAY_NAME", "Development User"))
     if kind == "entra":
         return EntraAuthProvider(
             tenant_id=config["ENTRA_TENANT_ID"],

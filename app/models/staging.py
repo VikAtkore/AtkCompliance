@@ -3,13 +3,13 @@ from datetime import datetime
 from sqlalchemy import String, Integer, BigInteger, DateTime, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from ..extensions import db
-from .base import utcnow
+from .base import BigIntPK, utcnow
 
 
 class LegacyXmlSubmissionStage(db.Model):
     __tablename__ = "LegacyXmlSubmissionStage"
 
-    StageId: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    StageId: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     SourceLibrary: Mapped[str | None] = mapped_column(String(255))
     SourceFileName: Mapped[str] = mapped_column(String(512), nullable=False)
     SourcePath: Mapped[str | None] = mapped_column(String(1024))
@@ -38,7 +38,7 @@ class LegacyVlookupStage(db.Model):
 class LegacyAttachmentStage(db.Model):
     __tablename__ = "LegacyAttachmentStage"
 
-    StageId: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    StageId: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     XmlStageId: Mapped[int | None] = mapped_column(BigInteger)
     FieldName: Mapped[str | None] = mapped_column(String(255))
     DecodedFileName: Mapped[str | None] = mapped_column(String(512))

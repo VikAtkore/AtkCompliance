@@ -16,6 +16,7 @@ def create_app(config_name: str | None = None) -> Flask:
     if hasattr(config_class, "validate"):
         config_class.validate()
 
+    _ensure_local_folders(app)
     _configure_logging(app)
     db.init_app(app)
     migrate.init_app(app, db)
@@ -30,6 +31,16 @@ def create_app(config_name: str | None = None) -> Flask:
     register_jobs(app)
 
     return app
+
+
+def _ensure_local_folders(app: Flask) -> None:
+    """SQLite development databases need their folder to exist first."""
+    uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    if uri.startswith("sqlite") and ":memory:" not in uri:
+        path = uri.split("///", 1)[-1]
+        folder = os.path.dirname(path)
+        if folder:
+            os.makedirs(folder, exist_ok=True)
 
 
 def _configure_logging(app: Flask) -> None:
@@ -167,3 +178,105 @@ def _register_cli(app: Flask) -> None:
         """Execute the reminder evaluation job once."""
         from .services import ReminderService
         click.echo(ReminderService(app.config).run())
+
+    @app.cli.command("dev-init")
+    def dev_init():
+        """Create the local schema and load sample data. Development only."""
+        if os.environ.get("ACC_ENV", "").lower() == "production":
+            raise click.ClickException("dev-init cannot be run against production.")
+        from datetime import date
+        from .models import (Role, CertificationPeriod, EntityMaster, AppUser,
+                             UserRole, ReminderTemplate, ReminderMilestone)
+        from .constants import RoleName, ReminderLevel
+
+        db.create_all()
+
+        for name in RoleName:
+            if not db.session.query(Role).filter(Role.RoleName == name.value).first():
+                db.session.add(Role(RoleName=name.value, Description=f"{name.value} role"))
+        db.session.commit()
+
+        if not db.session.query(CertificationPeriod).first():
+            db.session.add(CertificationPeriod(
+                QuarterLabel="Q1 2026", FiscalYear=2026, QuarterNumber=1,
+                StartDate=date(2026, 1, 1), DueDate=date(2026, 2, 15),
+                IsOpen=True, Enable404=False))
+            db.session.add(CertificationPeriod(
+                QuarterLabel="Q4 2025", FiscalYear=2025, QuarterNumber=4,
+                StartDate=date(2025, 10, 1), DueDate=date(2025, 11, 15),
+                IsOpen=False, Enable404=True))
+
+        if not db.session.query(EntityMaster).first():
+            db.session.add_all([
+                EntityMaster(Title="Atkore Mokena", EntityNumber="1001",
+                             PullName="Mokena", Region="North America",
+                             BusinessSegment="Electrical", BusinessUnit="Conduit",
+                             Location="Mokena", IsGroup1=False, IsGroup2=True),
+                EntityMaster(Title="Atkore Harvey", EntityNumber="1002",
+                             PullName="Harvey", Region="North America",
+                             BusinessSegment="Electrical", BusinessUnit="Cable",
+                             Location="Harvey", IsGroup1=True, IsGroup2=False),
+                EntityMaster(Title="Atkore Safety & Infrastructure", EntityNumber="2001",
+                             PullName="S&I", Region="North America",
+                             BusinessSegment="Safety & Infrastructure",
+                             BusinessUnit="Mechanical", Location="Phoenix",
+                             IsGroup1=True, IsGroup2=False),
+            ])
+
+        if not db.session.query(ReminderTemplate).first():
+            template = ReminderTemplate(
+                Name="Standard certification reminder",
+                Subject="Action required: quarterly compliance certification",
+                BodyHtml="<p>Your quarterly compliance certification is due. "
+                         "Please complete it in the Compliance Portal.</p>",
+                TargetAudience="Submitter")
+            db.session.add(template)
+            db.session.flush()
+            db.session.add(ReminderMilestone(
+                Title="14 days before due date", OffsetDaysFromDue=-14,
+                ReminderLevel=ReminderLevel.ADVANCE, TemplateId=template.TemplateId))
+        db.session.commit()
+
+        upn = app.config.get("DEV_UPN", "dev.user@atkore.com").lower()
+        user = db.session.query(AppUser).filter(
+            AppUser.UserPrincipalName == upn).first()
+        if user is None:
+            user = AppUser(UserPrincipalName=upn,
+                           DisplayName=app.config.get("DEV_DISPLAY_NAME", "Dev User"),
+                           Email=upn)
+            db.session.add(user)
+            db.session.flush()
+        for name in RoleName:
+            role = db.session.query(Role).filter(Role.RoleName == name.value).first()
+            exists = db.session.query(UserRole).filter(
+                UserRole.UserId == user.UserId, UserRole.RoleId == role.RoleId).first()
+            if not exists:
+                db.session.add(UserRole(UserId=user.UserId, RoleId=role.RoleId,
+                                        GrantedBy="dev-init"))
+        db.session.commit()
+        click.echo(f"Local database ready. Signed-in dev user: {upn} (all four roles).")
+
+    @app.cli.command("grant-role")
+    @click.argument("upn")
+    @click.argument("role_name")
+    def grant_role(upn, role_name):
+        """Grant a portal role: flask grant-role user@atkore.com Reviewer"""
+        from .models import AppUser, Role, UserRole
+        user = db.session.query(AppUser).filter(
+            AppUser.UserPrincipalName == upn.lower()).first()
+        role = db.session.query(Role).filter(Role.RoleName == role_name).first()
+        if user is None:
+            raise click.ClickException(f"No user {upn}. They must sign in once first.")
+        if role is None:
+            raise click.ClickException(f"Unknown role {role_name}.")
+        db.session.add(UserRole(UserId=user.UserId, RoleId=role.RoleId,
+                                GrantedBy="cli"))
+        db.session.commit()
+        click.echo(f"Granted {role_name} to {upn}.")
+
+    @app.cli.command("list-routes")
+    def list_routes():
+        """Print every registered endpoint."""
+        for rule in sorted(app.url_map.iter_rules(), key=lambda r: str(r)):
+            methods = ",".join(sorted(rule.methods - {"HEAD", "OPTIONS"}))
+            click.echo(f"{methods:<22} {rule}")

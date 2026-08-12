@@ -9,7 +9,7 @@ from sqlalchemy import (String, Boolean, Integer, BigInteger, DateTime, ForeignK
                         Index, Text)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..extensions import db
-from .base import TimestampMixin
+from .base import TimestampMixin, BigIntPK
 
 
 class ReminderMilestone(db.Model, TimestampMixin):
@@ -64,7 +64,7 @@ class ReminderRunLog(db.Model):
     __tablename__ = "ReminderRunLog"
     __table_args__ = (Index("IX_ReminderRunLog_Run", "RunUtc"),)
 
-    RunLogId: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    RunLogId: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     ReminderMilestoneId: Mapped[int | None] = mapped_column(
         ForeignKey("ReminderMilestone.ReminderMilestoneId"))
     RunUtc: Mapped[datetime] = mapped_column(DateTime, nullable=False)

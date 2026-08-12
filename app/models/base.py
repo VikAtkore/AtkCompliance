@@ -1,7 +1,11 @@
 from datetime import datetime, timezone
-from sqlalchemy import DateTime, String
+from sqlalchemy import BigInteger, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from ..extensions import db
+
+# SQL Server uses BIGINT IDENTITY; SQLite only auto-increments INTEGER PRIMARY KEY.
+# This variant keeps local development on SQLite working without changing prod DDL.
+BigIntPK = BigInteger().with_variant(Integer, "sqlite")
 
 
 def utcnow() -> datetime:

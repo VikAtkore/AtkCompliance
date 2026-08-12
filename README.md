@@ -29,26 +29,41 @@ atkore_compliance/
 ├── migrations/versions/     0001 baseline schema, 0002 roles + question catalogue
 ├── tests/                   validation, transitions, permissions, XML parsing
 ├── docs/                    ERD, API inventory, permission matrix, auth, services, config, navigation
-├── config.py, run.py, web.config, requirements.txt, .env.example
+├── .vscode/                launch + settings for F5 debugging
+├── config.py, run.py, web.config, requirements*.txt, .env*.example
 ```
 
-## Setup
+## Run locally (Windows + VS Code)
 
-```bash
-python -m venv .venv && .venv\Scripts\activate
-pip install -r requirements.txt
+No SQL Server, no Entra registration, no SharePoint needed.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+copy .env.development.example .env
+$env:FLASK_APP = "run.py"
+flask dev-init                  # SQLite schema + sample data
+flask run --port 5000 --debug
+```
+
+Then open `http://localhost:5000/health`, then `/auth/login`, then `/auth/me`.
+Full walkthrough incl. proxy, LocalDB and troubleshooting: **`docs/LOCAL_DEV_SETUP.md`**
+
+## Production setup
+
+```powershell
+pip install -r requirements.txt -r requirements-sqlserver.txt
 copy .env.example .env          # then populate secrets
-set ACC_ENV=production
-flask db upgrade                # creates the full schema
-flask seed-roles                # idempotent; 0002 also seeds them
-python run.py                   # dev only — IIS hosts it in production
+$env:ACC_ENV = "production"
+flask db upgrade                # 0001 baseline + 0002 seed
 ```
 
 ## Verify
 
-```bash
-pytest                          # validation rules, transitions, permissions, parsing
-curl http://localhost:5000/health
+```powershell
+$env:ACC_ENV = "testing"; pytest
+flask list-routes
 ```
 
 ## Documentation
@@ -62,6 +77,7 @@ curl http://localhost:5000/health
 | `docs/SERVICE_LAYER.md` | Service responsibilities, validation rules, status machine |
 | `docs/CONFIGURATION.md` | Every environment variable |
 | `docs/NAVIGATION.md` | Menu tree and Phase 2 route map |
+| `docs/LOCAL_DEV_SETUP.md` | Windows + VS Code local run, troubleshooting, git workflow |
 
 ## Not in Phase 1
 

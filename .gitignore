@@ -6,3 +6,7 @@ instance/
 .pytest_cache/
 .coverage
 htmlcov/
+.venv/
+.env.local
+*.db
+.vscode/*.local.json

@@ -6,7 +6,7 @@ from sqlalchemy import (String, Boolean, Integer, BigInteger, DateTime, Numeric,
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..extensions import db
 from ..constants import SubmissionStatus
-from .base import TimestampMixin
+from .base import TimestampMixin, BigIntPK
 
 
 class Submission(db.Model, TimestampMixin):
@@ -17,7 +17,7 @@ class Submission(db.Model, TimestampMixin):
         Index("IX_Submission_Upn", "EmployeeUserPrincipalName"),
     )
 
-    SubmissionId: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    SubmissionId: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     PeriodId: Mapped[int] = mapped_column(ForeignKey("CertificationPeriod.PeriodId"), nullable=False)
     EntityId: Mapped[int | None] = mapped_column(ForeignKey("EntityMaster.EntityId"))
 
@@ -75,7 +75,7 @@ class SubmissionRepresentative(db.Model):
     """Legacy Rep_Names repeating field, normalized."""
     __tablename__ = "SubmissionRepresentative"
 
-    RepresentativeId: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    RepresentativeId: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     SubmissionId: Mapped[int] = mapped_column(ForeignKey("Submission.SubmissionId"), nullable=False)
     RepresentativeName: Mapped[str] = mapped_column(String(255), nullable=False)
     RepresentativeTitle: Mapped[str | None] = mapped_column(String(255))
@@ -88,7 +88,7 @@ class QuestionnaireResponse(db.Model):
     __tablename__ = "QuestionnaireResponse"
     __table_args__ = (Index("IX_Questionnaire_Submission", "SubmissionId"),)
 
-    ResponseId: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    ResponseId: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     SubmissionId: Mapped[int] = mapped_column(ForeignKey("Submission.SubmissionId"), nullable=False)
     QuestionCode: Mapped[str] = mapped_column(String(100), nullable=False)
     QuestionText: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -104,7 +104,7 @@ class Attestation(db.Model):
     __tablename__ = "Attestation"
     __table_args__ = (Index("IX_Attestation_Submission_Type", "SubmissionId", "AttestationType"),)
 
-    AttestationId: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    AttestationId: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     SubmissionId: Mapped[int] = mapped_column(ForeignKey("Submission.SubmissionId"), nullable=False)
     AttestationType: Mapped[str] = mapped_column(String(100), nullable=False)
     Selected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -123,7 +123,7 @@ class Attachment(db.Model):
     __tablename__ = "Attachment"
     __table_args__ = (Index("IX_Attachment_Submission", "SubmissionId"),)
 
-    AttachmentId: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    AttachmentId: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     SubmissionId: Mapped[int] = mapped_column(ForeignKey("Submission.SubmissionId"), nullable=False)
     AttestationId: Mapped[int | None] = mapped_column(ForeignKey("Attestation.AttestationId"))
     FieldCode: Mapped[str | None] = mapped_column(String(100))
