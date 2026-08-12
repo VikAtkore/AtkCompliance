@@ -96,6 +96,8 @@ flask dev-init
 Expected output:
 
 ```
+Database: sqlite+pysqlite:///C:\atkore_compliance\instance\atkore_compliance_dev.db
+Instance folder: C:\atkore_compliance\instance
 Local database ready. Signed-in dev user: vpandey@atkore.com (all four roles).
 ```
 
@@ -104,6 +106,11 @@ This creates `instance\atkore_compliance_dev.db` and loads: the 4 roles, 2 certi
 **Note:** `dev-init` uses `create_all()`, not `flask db upgrade`. The Alembic migrations target SQL Server (`SYSUTCDATETIME()`, BIGINT IDENTITY) and will not run on SQLite. Use `flask db upgrade` only against real SQL Server — section 9.
 
 To start over: delete `instance\atkore_compliance_dev.db` and re-run `flask dev-init`.
+
+**Do not prefix `ACC_DATABASE_URI` with `instance/`.** Flask-SQLAlchemy already
+resolves a relative SQLite filename against the instance folder; adding the
+prefix nests it twice (`instance\instance\...`) and fails with
+`unable to open database file`.
 
 ---
 
@@ -233,7 +240,7 @@ git push -u origin phase1-foundation
 | `ModuleNotFoundError: flask` | venv not active | `.\.venv\Scripts\Activate.ps1`, re-select the interpreter |
 | `Could not locate a Flask application` | `FLASK_APP` unset | `$env:FLASK_APP = "run.py"` |
 | `Activate.ps1 cannot be loaded` | PowerShell execution policy | `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` |
-| `unable to open database file` | `instance\` missing | Re-run `flask dev-init` (it creates the folder) |
+| `unable to open database file` | `ACC_DATABASE_URI` contains an `instance/` prefix, so the path nests twice | Set it to `sqlite+pysqlite:///atkore_compliance_dev.db` (no folder prefix), delete any stray `instance\instance\` folder, re-run `flask dev-init` |
 | `no such table: Role` | Database not initialized | `flask dev-init` |
 | 401 on every API call | No session cookie | Visit `/auth/login` first |
 | 403 with `missing_permissions` | Role not granted | `flask grant-role <upn> <role>` |

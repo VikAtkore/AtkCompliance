@@ -111,9 +111,12 @@ class DevelopmentConfig(BaseConfig):
     REMINDER_DRY_RUN = True
     ENABLE_SCHEDULER = _bool("ACC_ENABLE_SCHEDULER", False)
     # SQLite by default so no database server is needed to run the app locally.
+    # NOTE: a relative SQLite path is resolved by Flask-SQLAlchemy against the
+    # application's instance folder, so this lands in instance\\ automatically.
+    # Do NOT prefix it with "instance/" -- that nests it one level too deep.
     # Point ACC_DATABASE_URI at SQL Server LocalDB to test the production driver.
     SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "ACC_DATABASE_URI", "sqlite+pysqlite:///instance/atkore_compliance_dev.db")
+        "ACC_DATABASE_URI", "sqlite+pysqlite:///atkore_compliance_dev.db")
     SQLALCHEMY_ENGINE_OPTIONS = {}
     # Signed-in identity used by the dev auth stub.
     DEV_UPN = os.environ.get("ACC_DEV_UPN", "vpandey@atkore.com")

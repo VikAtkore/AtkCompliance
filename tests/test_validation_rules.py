@@ -1,6 +1,7 @@
 """Validation rules carried over from the legacy InfoPath rule sets."""
 import pytest
 from app.services import ValidationService, SubmissionService
+from app.extensions import db
 from app.constants import (AttestationType, QUESTION_CATALOG, GROUP2_EXCEPTION_CODE,
                            GROUP1_EXCEPTION_CODE)
 
@@ -16,6 +17,10 @@ def _draft(app, period, entity):
             preparer_role="Controller")
 
 
+def _attach(submission):
+    return db.session.merge(submission)
+
+
 def _codes(result):
     return {i.code for i in result.issues}
 
@@ -27,6 +32,7 @@ def _fields(result):
 def test_draft_creation_seeds_ten_questions_plus_group2(app, open_period, group2_entity):
     submission = _draft(app, open_period, group2_entity)
     with app.app_context():
+        submission = _attach(submission)
         codes = {r.QuestionCode for r in submission.responses}
         assert len(QUESTION_CATALOG) == 10
         assert {c for c, _, _ in QUESTION_CATALOG} <= codes
@@ -37,6 +43,7 @@ def test_draft_creation_seeds_ten_questions_plus_group2(app, open_period, group2
 def test_submit_requires_at_least_one_attestation(app, open_period, group2_entity):
     submission = _draft(app, open_period, group2_entity)
     with app.app_context():
+        submission = _attach(submission)
         result = ValidationService(CONFIG).validate_for_submit(submission)
         assert not result.is_valid
         assert "attestations" in _fields(result)
@@ -45,6 +52,7 @@ def test_submit_requires_at_least_one_attestation(app, open_period, group2_entit
 def test_yes_answer_requires_explanation(app, open_period, group2_entity):
     submission = _draft(app, open_period, group2_entity)
     with app.app_context():
+        submission = _attach(submission)
         for a in submission.attestations:
             if a.AttestationType == AttestationType.QUESTIONNAIRE_302:
                 a.Selected = True
@@ -64,6 +72,7 @@ def test_yes_answer_requires_explanation(app, open_period, group2_entity):
 def test_yes_answer_with_explanation_passes(app, open_period, group2_entity):
     submission = _draft(app, open_period, group2_entity)
     with app.app_context():
+        submission = _attach(submission)
         for a in submission.attestations:
             if a.AttestationType == AttestationType.QUESTIONNAIRE_302:
                 a.Selected = True
@@ -82,6 +91,7 @@ def test_yes_answer_with_explanation_passes(app, open_period, group2_entity):
 def test_selected_module_requires_acknowledgement(app, open_period, group2_entity):
     submission = _draft(app, open_period, group2_entity)
     with app.app_context():
+        submission = _attach(submission)
         for a in submission.attestations:
             if a.AttestationType == AttestationType.LEGAL_REPRESENTATION:
                 a.Selected = True
@@ -97,6 +107,7 @@ def test_selected_module_requires_acknowledgement(app, open_period, group2_entit
 def test_group2_threshold_question_requires_explanation(app, open_period, group2_entity):
     submission = _draft(app, open_period, group2_entity)
     with app.app_context():
+        submission = _attach(submission)
         for a in submission.attestations:
             if a.AttestationType == AttestationType.MANAGEMENT_REPRESENTATION:
                 a.Selected = True
@@ -118,6 +129,7 @@ def test_group2_threshold_question_requires_explanation(app, open_period, group2
 def test_no_exception_default_text_applied(app, open_period, group2_entity):
     submission = _draft(app, open_period, group2_entity)
     with app.app_context():
+        submission = _attach(submission)
         for a in submission.attestations:
             if a.AttestationType == AttestationType.FINANCE_CODE_OF_CONDUCT:
                 a.Selected = True
@@ -136,6 +148,7 @@ def test_no_exception_default_text_applied(app, open_period, group2_entity):
 def test_header_fields_are_required(app, open_period, group2_entity):
     submission = _draft(app, open_period, group2_entity)
     with app.app_context():
+        submission = _attach(submission)
         submission.EmployeeName = ""
         submission.PreparerRole = ""
         result = ValidationService(CONFIG).validate_for_submit(submission)
@@ -145,6 +158,7 @@ def test_header_fields_are_required(app, open_period, group2_entity):
 def test_404_module_absent_when_period_disables_it(app, open_period, group2_entity):
     submission = _draft(app, open_period, group2_entity)
     with app.app_context():
+        submission = _attach(submission)
         types = {a.AttestationType for a in submission.attestations}
         assert AttestationType.CERTIFICATION_404 not in types
         assert len(types) == 4

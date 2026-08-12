@@ -34,13 +34,19 @@ def create_app(config_name: str | None = None) -> Flask:
 
 
 def _ensure_local_folders(app: Flask) -> None:
-    """SQLite development databases need their folder to exist first."""
+    """SQLite development databases live in the instance folder.
+
+    Flask-SQLAlchemy resolves a *relative* sqlite path against
+    app.instance_path, so the folder must exist before the engine connects.
+    An absolute path (or SQL Server) needs nothing from us.
+    """
     uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
-    if uri.startswith("sqlite") and ":memory:" not in uri:
-        path = uri.split("///", 1)[-1]
-        folder = os.path.dirname(path)
-        if folder:
-            os.makedirs(folder, exist_ok=True)
+    if not uri.startswith("sqlite") or ":memory:" in uri:
+        return
+    os.makedirs(app.instance_path, exist_ok=True)
+    path = uri.split("///", 1)[-1]
+    if os.path.isabs(path) and os.path.dirname(path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
 
 
 def _configure_logging(app: Flask) -> None:
@@ -254,6 +260,8 @@ def _register_cli(app: Flask) -> None:
                 db.session.add(UserRole(UserId=user.UserId, RoleId=role.RoleId,
                                         GrantedBy="dev-init"))
         db.session.commit()
+        click.echo(f"Database: {db.engine.url}")
+        click.echo(f"Instance folder: {app.instance_path}")
         click.echo(f"Local database ready. Signed-in dev user: {upn} (all four roles).")
 
     @app.cli.command("grant-role")
