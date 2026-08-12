@@ -86,6 +86,7 @@ def _register_blueprints(app: Flask) -> None:
     from .auth.decorators import login_required
     from .services import EntityService, PeriodService
     from .services.attestation_service import AttestationService
+    from flask import render_template
 
     @app.get("/api/navigation")
     @login_required
@@ -132,6 +133,17 @@ def _register_blueprints(app: Flask) -> None:
             status["status"] = "degraded"
             status["database"] = "unavailable"
         return jsonify(status), 200 if status["status"] == "ok" else 503
+
+    @app.get("/")
+    def index():
+        # Placeholder summary counts for dashboard cards
+        counts = {
+            "my_certifications": 3,
+            "create_certification": 0,
+            "reports": 7,
+            "administration": 1,
+        }
+        return render_template("index.html", counts=counts)
 
 
 def _register_hooks(app: Flask) -> None:
