@@ -60,7 +60,8 @@
           <div>
             <span id="submission-info" class="me-2"></span>
             <button type="button" id="save-draft" class="btn btn-outline-primary">Save Draft</button>
-            <button type="submit" id="submit-btn" class="btn btn-success d-none">Submit</button>
+            <button type="button" id="cancel-btn" class="btn btn-outline-secondary ms-2">Cancel</button>
+            <button type="submit" id="submit-btn" class="btn btn-success d-none ms-2">Submit</button>
           </div>
         </div>
       </form>
@@ -95,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentSubmissionId = null;
   let mySubmissions = [];
+  let unsavedChanges = false;
 
   // Load existing user submissions so we can find drafts
   fetch('/api/submissions').then(r=>r.json()).then(j=>{ mySubmissions = j.items || []; }).catch(()=>{ mySubmissions = []; });
@@ -133,6 +135,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('entity-select').addEventListener('change', tryLoadExistingDraft);
   document.getElementById('period-select').addEventListener('change', tryLoadExistingDraft);
+  document.getElementById('entity-select').addEventListener('change', ()=> unsavedChanges = true);
+  document.getElementById('period-select').addEventListener('change', ()=> unsavedChanges = true);
+  document.getElementById('employee-name').addEventListener('input', ()=> unsavedChanges = true);
+  document.getElementById('preparer-role').addEventListener('input', ()=> unsavedChanges = true);
+
+  const cancelBtn = document.getElementById('cancel-btn');
+  cancelBtn.addEventListener('click', ()=>{
+    if (unsavedChanges) {
+      if (!confirm('You have unsaved changes. Leave without saving?')) return;
+    }
+    window.location = '/';
+  });
 
   saveBtn.addEventListener('click', async () => {
     const entityId = Number(document.getElementById('entity-select').value);
@@ -158,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mySubmissions.push({ submissionId: data.submissionId, entityId: data.entityId, periodId: data.periodId, status: data.status });
       }
       document.getElementById('submission-info').textContent = `Submission: ${data.submissionId} • Last saved: ${data.lastSavedUtc || ''}`;
+      unsavedChanges = false;
       alert('Draft saved (submission id: ' + data.submissionId + ')');
     } catch (e) {
       alert('Save draft failed');

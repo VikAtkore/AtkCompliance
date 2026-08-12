@@ -8,3 +8,8 @@ def test_home_page_renders(app):
     assert 'Create Certification' in text
     assert 'Reports' in text
     assert 'Administration' in text
+    # Ensure dashboard cards link to correct locations
+    assert 'href="/certifications"' in text
+    assert 'href="/certifications/new"' in text
+    assert 'href="/reports"' in text
+    assert 'href="/admin"' in text

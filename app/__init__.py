@@ -146,6 +146,14 @@ def _register_blueprints(app: Flask) -> None:
         }
         return render_template("index.html", counts=counts)
 
+    @app.get("/reports")
+    def reports_ui():
+        return render_template("reports/index.html")
+
+    @app.get("/admin")
+    def admin_ui():
+        return render_template("admin/index.html")
+
 
 def _register_hooks(app: Flask) -> None:
     from .auth.identity import load_current_user

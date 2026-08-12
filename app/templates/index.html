@@ -3,38 +3,42 @@
 {% block content %}
 <div class="row g-3">
   <div class="col-12 col-md-6 col-lg-3">
-    <div class="card shadow-sm">
+    <div class="card shadow-sm clickable position-relative">
       <div class="card-body">
         <h5 class="card-title">My Certifications</h5>
         <p class="card-text display-6">{{ counts.my_certifications }}</p>
         <p class="text-muted">Ongoing and past certifications assigned to you.</p>
+        <a href="/certifications" class="stretched-link" aria-label="My Certifications"></a>
       </div>
     </div>
   </div>
   <div class="col-12 col-md-6 col-lg-3">
-    <div class="card shadow-sm">
+    <div class="card shadow-sm clickable position-relative">
       <div class="card-body">
         <h5 class="card-title">Create Certification</h5>
         <p class="card-text display-6">{{ counts.create_certification }}</p>
         <p class="text-muted">Start a new certification for an entity.</p>
+        <a href="/certifications/new" class="stretched-link" aria-label="Create Certification"></a>
       </div>
     </div>
   </div>
   <div class="col-12 col-md-6 col-lg-3">
-    <div class="card shadow-sm">
+    <div class="card shadow-sm clickable position-relative">
       <div class="card-body">
         <h5 class="card-title">Reports</h5>
         <p class="card-text display-6">{{ counts.reports }}</p>
         <p class="text-muted">View compliance reports and exports.</p>
+        <a href="/reports" class="stretched-link" aria-label="Reports"></a>
       </div>
     </div>
   </div>
   <div class="col-12 col-md-6 col-lg-3">
-    <div class="card shadow-sm">
+    <div class="card shadow-sm clickable position-relative">
       <div class="card-body">
         <h5 class="card-title">Administration</h5>
         <p class="card-text display-6">{{ counts.administration }}</p>
         <p class="text-muted">Portal administration and configuration.</p>
+        <a href="/admin" class="stretched-link" aria-label="Administration"></a>
       </div>
     </div>
   </div>
