@@ -73,13 +73,14 @@ def _configure_logging(app: Flask) -> None:
 def _register_blueprints(app: Flask) -> None:
     from .auth import bp as auth_bp
     from .submissions import bp as submissions_bp
+    from .certifications import bp as certifications_bp
     from .admin import bp as admin_bp
     from .reports import bp as reports_bp
     from .reminders import bp as reminders_bp
     from .migration import bp as migration_bp
 
-    for blueprint in (auth_bp, submissions_bp, admin_bp, reports_bp,
-                      reminders_bp, migration_bp):
+    for blueprint in (auth_bp, submissions_bp, certifications_bp, admin_bp,
+                      reports_bp, reminders_bp, migration_bp):
         app.register_blueprint(blueprint)
 
     from .navigation import visible_navigation
